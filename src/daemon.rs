@@ -3,7 +3,7 @@ use reqwest::Client;
 use std::time::Duration;
 use tokio::time::sleep;
 
-use crate::{config, flickr, wallpaper};
+use crate::{config, providers, wallpaper};
 
 pub async fn run() -> Result<()> {
     let client = Client::new();
@@ -11,52 +11,30 @@ pub async fn run() -> Result<()> {
     loop {
         let cfg = config::load()?;
 
-        // Ensure we have wallpapers; download if the pool is empty.
-        let wallpapers_dir = config::wallpapers_dir()?;
-        let mut images: Vec<_> = std::fs::read_dir(&wallpapers_dir)?
-            .filter_map(|e| e.ok())
-            .map(|e| e.path())
-            .filter(|p| {
-                matches!(
-                    p.extension().and_then(|e| e.to_str()),
-                    Some("jpg" | "jpeg" | "png" | "webp")
-                )
-            })
-            .collect();
-
-        if images.is_empty() && !cfg.flickr_terms.is_empty() {
-            println!("Wallpaper pool empty — downloading from Flickr…");
-            images = flickr::download_batch(&client, &cfg).await?;
+        if !cfg.terms.is_empty() && wallpaper::pool_is_empty() {
+            println!("Wallpaper pool empty — downloading from providers…");
+            providers::download_all(&client, &cfg).await?;
         }
 
-        if images.is_empty() {
-            eprintln!(
-                "No wallpapers available. Add Flickr search terms with `gtkwallpapers flickr <term>`."
-            );
-        } else {
-            // Pick a pseudo-random image.
-            let idx = (std::time::SystemTime::now()
-                .duration_since(std::time::UNIX_EPOCH)?
-                .subsec_nanos() as usize)
-                % images.len();
-            let chosen = &images[idx];
+        match wallpaper::pick_random() {
+            Err(e) => eprintln!("{e}"),
+            Ok(chosen) => {
+                if let Err(e) = wallpaper::set(&chosen) {
+                    eprintln!("Failed to set wallpaper: {e}");
+                } else {
+                    println!("Wallpaper set: {}", chosen.display());
+                }
 
-            if let Err(e) = wallpaper::set(chosen) {
-                eprintln!("Failed to set wallpaper: {e}");
-            } else {
-                println!("Wallpaper set: {}", chosen.display());
-            }
-
-            // Opportunistically download new images in the background so the
-            // pool stays fresh without blocking the rotation.
-            if !cfg.flickr_terms.is_empty() {
-                let client2 = client.clone();
-                let cfg2 = cfg.clone();
-                tokio::spawn(async move {
-                    if let Err(e) = flickr::download_batch(&client2, &cfg2).await {
-                        eprintln!("Background download error: {e}");
-                    }
-                });
+                // Opportunistically fetch new images in the background.
+                if !cfg.terms.is_empty() {
+                    let client2 = client.clone();
+                    let cfg2 = cfg.clone();
+                    tokio::spawn(async move {
+                        if let Err(e) = providers::download_all(&client2, &cfg2).await {
+                            eprintln!("Background download error: {e}");
+                        }
+                    });
+                }
             }
         }
 

@@ -68,15 +68,14 @@ struct Photo {
     id: String,
     server: String,
     secret: String,
-    farm: u32,
 }
 
 impl Photo {
-    /// Constructs the "Large" (1024px) image URL.
+    /// Constructs the "Large" (1024px) image URL using the current Flickr CDN.
     fn url_large(&self) -> String {
         format!(
-            "https://farm{}.staticflickr.com/{}/{}_{}_b.jpg",
-            self.farm, self.server, self.id, self.secret
+            "https://live.staticflickr.com/{}/{}_{}_b.jpg",
+            self.server, self.id, self.secret
         )
     }
 }
@@ -113,14 +112,11 @@ async fn fetch_random_photo(client: &Client, cfg: &Config, term: &str) -> Result
         ("safe_search", "1"),
     ];
 
-    let api_key_owned;
-    if let Some(key) = &cfg.flickr_api_key {
-        api_key_owned = key.clone();
-        params.push(("api_key", &api_key_owned));
-    } else {
-        // Without an API key Flickr still responds but with limited results.
-        params.push(("api_key", ""));
-    }
+    let api_key_owned = cfg
+        .flickr_api_key
+        .clone()
+        .context("No Flickr API key set. Run `gtkwallpapers flickrkey <key>` first.")?;
+    params.push(("api_key", &api_key_owned));
 
     let resp: SearchResponse = client
         .get("https://api.flickr.com/services/rest/")

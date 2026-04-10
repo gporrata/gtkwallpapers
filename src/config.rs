@@ -3,39 +3,45 @@ use dirs::config_dir;
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 
-#[derive(Serialize, Deserialize, Clone)]
+pub const SERVICE_NAMES: &[&str] = &["unsplash", "pexels", "pixabay", "wallhaven"];
+
+#[derive(Serialize, Deserialize, Clone, Default)]
 pub struct Config {
     /// Seconds between wallpaper rotations (default: 30 minutes)
+    #[serde(default = "default_frequency")]
     pub frequency_secs: u64,
-    /// Flickr search terms used to download wallpapers
-    pub flickr_terms: Vec<String>,
-    /// Flickr API key (optional; enables higher rate limits)
-    pub flickr_api_key: Option<String>,
+    /// Search terms used across all photo providers
+    #[serde(default)]
+    pub terms: Vec<String>,
+    /// Unsplash API key (required)
+    pub unsplash_api_key: Option<String>,
+    /// Pexels API key (required)
+    pub pexels_api_key: Option<String>,
+    /// Pixabay API key (required)
+    pub pixabay_api_key: Option<String>,
+    /// Wallhaven API key (optional; needed for non-SFW content)
+    pub wallhaven_api_key: Option<String>,
 }
 
-impl Default for Config {
-    fn default() -> Self {
-        Self {
-            frequency_secs: 30 * 60,
-            flickr_terms: Vec::new(),
-            flickr_api_key: None,
-        }
-    }
+fn default_frequency() -> u64 {
+    30 * 60
 }
 
-pub fn config_path() -> Result<PathBuf> {
+fn base_dir() -> Result<PathBuf> {
     let dir = config_dir()
         .context("could not resolve $HOME/.config")?
         .join("gtkwallpapers");
     std::fs::create_dir_all(&dir)?;
-    Ok(dir.join("config.json"))
+    Ok(dir)
 }
 
-pub fn wallpapers_dir() -> Result<PathBuf> {
-    let dir = config_dir()
-        .context("could not resolve $HOME/.config")?
-        .join("gtkwallpapers")
-        .join("wallpapers");
+pub fn config_path() -> Result<PathBuf> {
+    Ok(base_dir()?.join("config.json"))
+}
+
+/// Returns ~/.config/gtkwallpapers/<service>/, creating it if needed.
+pub fn service_dir(service: &str) -> Result<PathBuf> {
+    let dir = base_dir()?.join(service);
     std::fs::create_dir_all(&dir)?;
     Ok(dir)
 }

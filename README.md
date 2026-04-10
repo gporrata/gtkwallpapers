@@ -1,12 +1,26 @@
 # gtkwallpapers
 
-A Rust CLI tool that runs a background daemon to automatically rotate desktop wallpapers on GNOME/GTK desktops (Ubuntu, etc.). Wallpapers are sourced from Flickr using configurable search terms and rotate on a schedule you control.
+A Rust CLI tool that runs a background daemon to automatically rotate desktop wallpapers on GNOME/GTK desktops (Ubuntu, etc.). Wallpapers are downloaded from multiple photo providers using configurable search terms and rotate on a schedule you control.
 
 ## Installation
 
 ```
 cargo install --path .
 ```
+
+## Getting started
+
+1. Add API keys for the providers you want to use (see [Photo providers](#photo-providers) below).
+2. Add search terms:
+   ```
+   gtkwallpapers terms mountains "sunset sky" ocean
+   ```
+3. Start the daemon:
+   ```
+   gtkwallpapers start
+   ```
+
+The daemon installs itself as a systemd user service, downloads wallpapers matching your search terms from all configured providers, and rotates them on the configured interval.
 
 ## Commands
 
@@ -16,38 +30,46 @@ cargo install --path .
 | `gtkwallpapers stop` | Stop the running daemon |
 | `gtkwallpapers status` | Show whether the daemon is running and recent log output |
 | `gtkwallpapers uninstall` | Stop and remove the systemd service unit |
-| `gtkwallpapers flickr <term> [terms...]` | Add one or more Flickr search terms (e.g. `flickr mountains "sunset sky"`) |
-| `gtkwallpapers flickr` | Open interactive menu to review and remove existing search terms |
-| `gtkwallpapers flickrkey <key>` | Save a Flickr API key (enables higher rate limits) |
-| `gtkwallpapers flickrkey` | Clear the stored Flickr API key |
+| `gtkwallpapers terms <term> [terms...]` | Add one or more search terms (e.g. `terms mountains "sunset sky"`) |
+| `gtkwallpapers terms` | Open interactive menu to review and remove existing search terms |
+| `gtkwallpapers next` | Switch to the next wallpaper immediately |
 | `gtkwallpapers update <frequency>` | Set the wallpaper rotation interval (e.g. `30m`, `1h`, `2h30m`) |
-| `gtkwallpapers path` | Print the folder where downloaded wallpapers are stored |
+| `gtkwallpapers path` | Print the folders where downloaded wallpapers are stored |
 
-## Wallpaper storage
+## Photo providers
 
-Downloaded wallpapers are saved to:
+Wallpapers are stored per-provider under `~/.config/gtkwallpapers/`:
+
 ```
-$HOME/.config/gtkwallpapers/wallpapers/
+~/.config/gtkwallpapers/
+  unsplash/
+  pexels/
+  pixabay/
+  wallhaven/
 ```
 
-## How it works
+API keys are set directly in `~/.config/gtkwallpapers/config.json`. Only providers with a key configured will download photos. **Wallhaven does not require a key** for SFW content.
 
-1. Add one or more Flickr search terms with `gtkwallpapers flickr <term> [terms...]`.
-2. Start the daemon with `gtkwallpapers start` — this installs a systemd user service that persists across reboots.
-3. The daemon rotates through downloaded wallpapers on the configured interval and downloads new ones from Flickr in the background.
+| Provider | Key field | Get a key |
+|---|---|---|
+| Unsplash | `unsplash_api_key` | [unsplash.com/developers](https://unsplash.com/developers) |
+| Pexels | `pexels_api_key` | [pexels.com/api](https://www.pexels.com/api/) |
+| Pixabay | `pixabay_api_key` | [pixabay.com/api/docs](https://pixabay.com/api/docs/) |
+| Wallhaven | `wallhaven_api_key` | [wallhaven.cc/settings/account](https://wallhaven.cc/settings/account) (optional) |
+
+Example `config.json`:
+
+```json
+{
+  "frequency_secs": 1800,
+  "terms": ["mountains", "sunset sky"],
+  "unsplash_api_key": "your-key-here",
+  "pexels_api_key": "your-key-here",
+  "pixabay_api_key": "your-key-here",
+  "wallhaven_api_key": null
+}
+```
 
 ## Configuration
 
-Config is stored at `$HOME/.config/gtkwallpapers/config.json`.
-
-The tool works without a Flickr API key, but unauthenticated requests are rate-limited and may return fewer results. Get a free key at [flickr.com/services/apps/create](https://www.flickr.com/services/apps/create) and register it with:
-
-```
-gtkwallpapers flickrkey <your-key>
-```
-
-To remove it:
-
-```
-gtkwallpapers flickrkey
-```
+Config is stored at `~/.config/gtkwallpapers/config.json`. Changes take effect on the next daemon rotation cycle (or immediately with `gtkwallpapers next`).
