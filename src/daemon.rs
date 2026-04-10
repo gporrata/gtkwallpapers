@@ -1,12 +1,15 @@
 use anyhow::Result;
 use reqwest::Client;
 use std::time::Duration;
+use tokio::sync::mpsc;
 use tokio::time::sleep;
 
-use crate::{config, providers, wallpaper};
+use crate::{config, providers, tray, wallpaper};
 
 pub async fn run() -> Result<()> {
     let client = Client::new();
+    let (tx, mut rx) = mpsc::unbounded_channel::<tray::Event>();
+    tray::spawn(tx);
 
     loop {
         let cfg = config::load()?;
@@ -25,7 +28,6 @@ pub async fn run() -> Result<()> {
                     println!("Wallpaper set: {}", chosen.display());
                 }
 
-                // Opportunistically fetch new images in the background.
                 if !cfg.terms.is_empty() {
                     let client2 = client.clone();
                     let cfg2 = cfg.clone();
@@ -38,6 +40,16 @@ pub async fn run() -> Result<()> {
             }
         }
 
-        sleep(Duration::from_secs(cfg.frequency_secs)).await;
+        // Wait for the rotation timer or a tray event, whichever comes first.
+        let cfg = config::load()?;
+        tokio::select! {
+            _ = sleep(Duration::from_secs(cfg.frequency_secs)) => {}
+            Some(event) = rx.recv() => {
+                match event {
+                    tray::Event::Next => {} // falls through to top of loop
+                    tray::Event::Quit => std::process::exit(0),
+                }
+            }
+        }
     }
 }

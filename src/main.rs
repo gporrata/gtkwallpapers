@@ -3,6 +3,7 @@ mod daemon;
 mod providers;
 mod service;
 mod terms;
+mod tray;
 mod wallpaper;
 
 use anyhow::Result;

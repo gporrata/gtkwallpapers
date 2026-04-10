@@ -4,9 +4,27 @@ A Rust CLI tool that runs a background daemon to automatically rotate desktop wa
 
 ## Installation
 
+**1. Install system dependencies**
+
+The system tray icon requires DBus development headers:
+
+```
+# Debian / Ubuntu
+sudo apt install libdbus-1-dev pkg-config
+
+# Fedora / RHEL
+sudo dnf install dbus-devel pkgconf-pkg-config
+```
+
+**2. Install the binary**
+
 ```
 cargo install --path .
 ```
+
+**3. GNOME tray icon support** (Ubuntu 22.04+)
+
+GNOME does not show tray icons by default. Install the [AppIndicator and KStatusNotifierItem Support](https://extensions.gnome.org/extension/615/appindicator-support/) extension, then log out and back in. The tray icon will appear in the top bar when the daemon is running.
 
 ## Getting started
 
