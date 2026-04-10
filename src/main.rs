@@ -34,6 +34,8 @@ enum Command {
     Update {
         frequency: String,
     },
+    /// Download wallpapers from all configured photo providers
+    Init,
     /// Switch to the next wallpaper immediately
     Next,
     /// Print the folder where wallpapers are stored
@@ -74,6 +76,15 @@ async fn main() -> Result<()> {
             cfg.frequency_secs = duration.as_secs();
             config::save(&cfg)?;
             println!("Wallpaper rotation set to {frequency}");
+        }
+        Some(Command::Init) => {
+            let cfg = config::load()?;
+            if cfg.terms.is_empty() {
+                anyhow::bail!("No search terms configured. Add some with `gtkwallpapers terms <term>`.");
+            }
+            println!("Downloading wallpapers from all configured providers…");
+            let saved = providers::download_all(&reqwest::Client::new(), &cfg).await?;
+            println!("{} wallpaper(s) downloaded.", saved.len());
         }
         Some(Command::Next) => {
             let cfg = config::load()?;

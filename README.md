@@ -15,12 +15,16 @@ cargo install --path .
    ```
    gtkwallpapers terms mountains "sunset sky" ocean
    ```
-3. Start the daemon:
+3. Download an initial set of wallpapers:
+   ```
+   gtkwallpapers init
+   ```
+4. Start the daemon:
    ```
    gtkwallpapers start
    ```
 
-The daemon installs itself as a systemd user service, downloads wallpapers matching your search terms from all configured providers, and rotates them on the configured interval.
+The daemon installs itself as a systemd user service and rotates through your downloaded wallpapers on the configured interval, fetching new ones from all configured providers in the background.
 
 ## Commands
 
@@ -32,6 +36,7 @@ The daemon installs itself as a systemd user service, downloads wallpapers match
 | `gtkwallpapers uninstall` | Stop and remove the systemd service unit |
 | `gtkwallpapers terms <term> [terms...]` | Add one or more search terms (e.g. `terms mountains "sunset sky"`) |
 | `gtkwallpapers terms` | Open interactive menu to review and remove existing search terms |
+| `gtkwallpapers init` | Download wallpapers from all configured photo providers |
 | `gtkwallpapers next` | Switch to the next wallpaper immediately |
 | `gtkwallpapers update <frequency>` | Set the wallpaper rotation interval (e.g. `30m`, `1h`, `2h30m`) |
 | `gtkwallpapers path` | Print the folders where downloaded wallpapers are stored |
