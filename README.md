@@ -10,7 +10,12 @@ cargo install --path .
 
 ## Getting started
 
-1. Add API keys for the providers you want to use (see [Photo providers](#photo-providers) below).
+1. Add API keys for the providers you want to use (see [Photo providers](#photo-providers) below):
+   ```
+   gtkwallpapers key unsplash <key>
+   gtkwallpapers key pexels <key>
+   gtkwallpapers key pixabay <key>
+   ```
 2. Add search terms:
    ```
    gtkwallpapers terms mountains "sunset sky" ocean
@@ -35,7 +40,9 @@ The daemon installs itself as a systemd user service and rotates through your do
 | `gtkwallpapers status` | Show whether the daemon is running and recent log output |
 | `gtkwallpapers uninstall` | Stop and remove the systemd service unit |
 | `gtkwallpapers terms <term> [terms...]` | Add one or more search terms (e.g. `terms mountains "sunset sky"`) |
-| `gtkwallpapers terms` | Open interactive menu to review and remove existing search terms |
+| `gtkwallpapers terms` | Open interactive list — ↑↓ to navigate, Del to remove a term, Esc to exit |
+| `gtkwallpapers key <provider> <key>` | Set an API key for a provider (unsplash, pexels, pixabay, wallhaven) |
+| `gtkwallpapers key <provider>` | Clear the API key for a provider |
 | `gtkwallpapers init` | Download wallpapers from all configured photo providers |
 | `gtkwallpapers next` | Switch to the next wallpaper immediately |
 | `gtkwallpapers update <frequency>` | Set the wallpaper rotation interval (e.g. `30m`, `1h`, `2h30m`) |
@@ -53,27 +60,14 @@ Wallpapers are stored per-provider under `~/.config/gtkwallpapers/`:
   wallhaven/
 ```
 
-API keys are set directly in `~/.config/gtkwallpapers/config.json`. Only providers with a key configured will download photos. **Wallhaven does not require a key** for SFW content.
+Use `gtkwallpapers key <provider> <key>` to register a key. Only providers with a key configured will download photos. **Wallhaven does not require a key** for SFW content.
 
-| Provider | Key field | Get a key |
+| Provider | Required | Get a key |
 |---|---|---|
-| Unsplash | `unsplash_api_key` | [unsplash.com/developers](https://unsplash.com/developers) |
-| Pexels | `pexels_api_key` | [pexels.com/api](https://www.pexels.com/api/) |
-| Pixabay | `pixabay_api_key` | [pixabay.com/api/docs](https://pixabay.com/api/docs/) |
-| Wallhaven | `wallhaven_api_key` | [wallhaven.cc/settings/account](https://wallhaven.cc/settings/account) (optional) |
-
-Example `config.json`:
-
-```json
-{
-  "frequency_secs": 1800,
-  "terms": ["mountains", "sunset sky"],
-  "unsplash_api_key": "your-key-here",
-  "pexels_api_key": "your-key-here",
-  "pixabay_api_key": "your-key-here",
-  "wallhaven_api_key": null
-}
-```
+| Unsplash | Yes | [unsplash.com/developers](https://unsplash.com/developers) |
+| Pexels | Yes | [pexels.com/api](https://www.pexels.com/api/) |
+| Pixabay | Yes | [pixabay.com/api/docs](https://pixabay.com/api/docs/) |
+| Wallhaven | No | [wallhaven.cc/settings/account](https://wallhaven.cc/settings/account) |
 
 ## Configuration
 

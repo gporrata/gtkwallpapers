@@ -6,7 +6,15 @@ mod terms;
 mod wallpaper;
 
 use anyhow::Result;
-use clap::{Parser, Subcommand};
+use clap::{Parser, Subcommand, ValueEnum};
+
+#[derive(Clone, ValueEnum)]
+enum Provider {
+    Unsplash,
+    Pexels,
+    Pixabay,
+    Wallhaven,
+}
 
 #[derive(Parser)]
 #[command(name = "gtkwallpapers", about = "Rotating wallpaper daemon for GNOME/GTK desktops")]
@@ -29,6 +37,13 @@ enum Command {
     Terms {
         /// One or more search terms to add (omit to open interactive selection)
         terms: Vec<String>,
+    },
+    /// Set or clear an API key for a photo provider (omit to list providers)
+    Key {
+        /// Photo provider: unsplash, pexels, pixabay, wallhaven
+        provider: Option<Provider>,
+        /// API key to store (omit to clear)
+        key: Option<String>,
     },
     /// Set how often the wallpaper rotates (e.g. 30m, 1h)
     Update {
@@ -70,6 +85,38 @@ async fn main() -> Result<()> {
             config::save(&cfg)?;
         }
         Some(Command::Terms { .. }) => terms::interactive_terms()?,
+        Some(Command::Key { provider: None, .. }) => {
+            let cfg = config::load()?;
+            println!("{:<12} {}", "PROVIDER", "KEY");
+            println!("{:<12} {}", "unsplash",  key_status(&cfg.unsplash_api_key));
+            println!("{:<12} {}", "pexels",    key_status(&cfg.pexels_api_key));
+            println!("{:<12} {}", "pixabay",   key_status(&cfg.pixabay_api_key));
+            println!("{:<12} {}", "wallhaven", key_status(&cfg.wallhaven_api_key));
+        }
+        Some(Command::Key { provider: Some(provider), key }) => {
+            let mut cfg = config::load()?;
+            let (slot, name) = match provider {
+                Provider::Unsplash  => (&mut cfg.unsplash_api_key,  "unsplash"),
+                Provider::Pexels    => (&mut cfg.pexels_api_key,    "pexels"),
+                Provider::Pixabay   => (&mut cfg.pixabay_api_key,   "pixabay"),
+                Provider::Wallhaven => (&mut cfg.wallhaven_api_key, "wallhaven"),
+            };
+            match key {
+                Some(k) => {
+                    *slot = Some(k);
+                    config::save(&cfg)?;
+                    println!("{name} API key saved.");
+                }
+                None => {
+                    if slot.take().is_some() {
+                        config::save(&cfg)?;
+                        println!("{name} API key cleared.");
+                    } else {
+                        println!("No {name} API key was set.");
+                    }
+                }
+            }
+        }
         Some(Command::Update { frequency }) => {
             let duration = humantime::parse_duration(&frequency)?;
             let mut cfg = config::load()?;
@@ -105,4 +152,8 @@ async fn main() -> Result<()> {
     }
 
     Ok(())
+}
+
+fn key_status(key: &Option<String>) -> &str {
+    if key.is_some() { "set" } else { "not set" }
 }

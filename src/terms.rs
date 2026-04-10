@@ -1,5 +1,5 @@
 use anyhow::Result;
-use inquire::MultiSelect;
+use console::{Key, Term};
 
 use crate::config;
 
@@ -11,33 +11,49 @@ pub fn interactive_terms() -> Result<()> {
         return Ok(());
     }
 
-    let selected = MultiSelect::new(
-        "Select terms to KEEP (space to toggle, enter to confirm, esc to cancel):",
-        cfg.terms.clone(),
-    )
-    .prompt_skippable()?;
+    let term = Term::stdout();
+    let mut cursor = 0usize;
 
-    if let Some(kept) = selected {
-        let removed: Vec<_> = cfg
-            .terms
-            .iter()
-            .filter(|t| !kept.contains(t))
-            .cloned()
-            .collect();
+    loop {
+        term.clear_screen()?;
+        println!("Search terms  \x1b[2m(↑↓ navigate · Del remove · Esc done)\x1b[0m\n");
 
-        cfg.terms = kept;
-        config::save(&cfg)?;
-
-        if removed.is_empty() {
-            println!("No changes made.");
-        } else {
-            for t in &removed {
-                println!("Removed: {t}");
+        for (i, t) in cfg.terms.iter().enumerate() {
+            if i == cursor {
+                println!("  \x1b[1;36m> {t}\x1b[0m");
+            } else {
+                println!("    {t}");
             }
         }
-    } else {
-        println!("Cancelled.");
-    }
 
-    Ok(())
+        match term.read_key()? {
+            Key::ArrowUp => {
+                if cursor > 0 {
+                    cursor -= 1;
+                }
+            }
+            Key::ArrowDown => {
+                if cursor + 1 < cfg.terms.len() {
+                    cursor += 1;
+                }
+            }
+            Key::Del => {
+                let removed = cfg.terms.remove(cursor);
+                println!("\nRemoved: {removed}");
+                if cfg.terms.is_empty() {
+                    config::save(&cfg)?;
+                    return Ok(());
+                }
+                if cursor >= cfg.terms.len() {
+                    cursor = cfg.terms.len() - 1;
+                }
+            }
+            Key::Escape => {
+                config::save(&cfg)?;
+                term.clear_screen()?;
+                return Ok(());
+            }
+            _ => {}
+        }
+    }
 }
