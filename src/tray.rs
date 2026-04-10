@@ -1,3 +1,4 @@
+use image::GenericImageView;
 use ksni::menu::*;
 use ksni::{Tray, TrayService};
 use tokio::sync::mpsc;
@@ -20,8 +21,22 @@ impl Tray for WallpaperTray {
         env!("CARGO_PKG_NAME").into()
     }
 
-    fn icon_name(&self) -> String {
-        "preferences-desktop-wallpaper".into()
+    fn icon_pixmap(&self) -> Vec<ksni::Icon> {
+        const PNG: &[u8] = include_bytes!("../assets/tray-icon.png");
+        let img = image::load_from_memory(PNG)
+            .expect("failed to decode assets/tray-icon.png")
+            .into_rgba8();
+        let (w, h) = img.dimensions();
+        // SNI expects ARGB32 (big-endian), image crate gives RGBA — swap to ARGB.
+        let data = img
+            .pixels()
+            .flat_map(|p| [p[3], p[0], p[1], p[2]])
+            .collect();
+        vec![ksni::Icon {
+            width: w as i32,
+            height: h as i32,
+            data,
+        }]
     }
 
     fn title(&self) -> String {
