@@ -1,5 +1,6 @@
 use anyhow::Result;
 use reqwest::Client;
+use std::path::PathBuf;
 use std::time::Duration;
 use tokio::sync::mpsc;
 use tokio::time::sleep;
@@ -10,6 +11,8 @@ pub async fn run() -> Result<()> {
     let client = Client::new();
     let (tx, mut rx) = mpsc::unbounded_channel::<tray::Event>();
     tray::spawn(tx);
+
+    let mut current_wallpaper: Option<PathBuf> = None;
 
     loop {
         let cfg = config::load()?;
@@ -27,6 +30,8 @@ pub async fn run() -> Result<()> {
                 } else {
                     println!("Wallpaper set: {}", chosen.display());
                 }
+
+                current_wallpaper = Some(chosen);
 
                 if !cfg.terms.is_empty() {
                     let client2 = client.clone();
@@ -47,6 +52,17 @@ pub async fn run() -> Result<()> {
             Some(event) = rx.recv() => {
                 match event {
                     tray::Event::Next => {} // falls through to top of loop
+                    tray::Event::DeleteNext => {
+                        if let Some(path) = current_wallpaper.take() {
+                            if path.exists() {
+                                if let Err(e) = std::fs::remove_file(&path) {
+                                    eprintln!("Failed to delete wallpaper: {e}");
+                                } else {
+                                    println!("Deleted wallpaper: {}", path.display());
+                                }
+                            }
+                        }
+                    }
                     tray::Event::Quit => std::process::exit(0),
                 }
             }

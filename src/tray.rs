@@ -5,6 +5,7 @@ use tokio::sync::mpsc;
 
 pub enum Event {
     Next,
+    DeleteNext,
     Quit,
 }
 
@@ -49,6 +50,14 @@ impl Tray for WallpaperTray {
                 label: "Next wallpaper".into(),
                 activate: Box::new(|this: &mut Self| {
                     let _ = this.tx.send(Event::Next);
+                }),
+                ..Default::default()
+            }
+            .into(),
+            StandardItem {
+                label: "Delete + Next Wallpaper".into(),
+                activate: Box::new(|this: &mut Self| {
+                    let _ = this.tx.send(Event::DeleteNext);
                 }),
                 ..Default::default()
             }
