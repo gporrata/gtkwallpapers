@@ -1,4 +1,3 @@
-use image::GenericImageView;
 use ksni::menu::*;
 use ksni::{Tray, TrayService};
 use tokio::sync::mpsc;
