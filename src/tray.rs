@@ -1,4 +1,3 @@
-use image::GenericImageView;
 use ksni::menu::*;
 use ksni::{Tray, TrayService};
 use tokio::sync::mpsc;
@@ -6,6 +5,7 @@ use tokio::sync::mpsc;
 pub enum Event {
     Next,
     DeleteNext,
+    Info,
     Quit,
 }
 
@@ -58,6 +58,15 @@ impl Tray for WallpaperTray {
                 label: "Delete + Next Wallpaper".into(),
                 activate: Box::new(|this: &mut Self| {
                     let _ = this.tx.send(Event::DeleteNext);
+                }),
+                ..Default::default()
+            }
+            .into(),
+            MenuItem::Separator,
+            StandardItem {
+                label: "Info".into(),
+                activate: Box::new(|this: &mut Self| {
+                    let _ = this.tx.send(Event::Info);
                 }),
                 ..Default::default()
             }

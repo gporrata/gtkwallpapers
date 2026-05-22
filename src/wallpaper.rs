@@ -1,6 +1,7 @@
 use anyhow::{bail, Context, Result};
 use std::path::{Path, PathBuf};
 use std::process::Command;
+use std::time::SystemTime;
 
 use crate::config::{self, SERVICE_NAMES};
 
@@ -67,4 +68,75 @@ pub fn set(path: &Path) -> Result<()> {
         .status();
 
     Ok(())
+}
+
+pub fn show_info_dialog(path: &Path) -> Result<()> {
+    let message = info_text(path)?;
+
+    if show_zenity_dialog(&message)? || show_kdialog(&message)? {
+        return Ok(());
+    }
+
+    println!("{message}");
+    Ok(())
+}
+
+fn info_text(path: &Path) -> Result<String> {
+    let base_name = path
+        .file_name()
+        .and_then(|name| name.to_str())
+        .unwrap_or("Unknown");
+    let provider = path
+        .parent()
+        .and_then(|parent| parent.file_name())
+        .and_then(|name| name.to_str())
+        .unwrap_or("Unknown");
+    let (width, height) = image::image_dimensions(path)
+        .with_context(|| format!("failed to read image dimensions for {}", path.display()))?;
+    let downloaded = downloaded_at(path)?;
+
+    Ok(format!(
+        "Base name: {base_name}\nImage size: {width} x {height}\nAPI: {provider}\nDownloaded: {downloaded}"
+    ))
+}
+
+fn downloaded_at(path: &Path) -> Result<String> {
+    let metadata = std::fs::metadata(path)?;
+    let time = metadata
+        .created()
+        .or_else(|_| metadata.modified())
+        .unwrap_or(SystemTime::UNIX_EPOCH);
+
+    Ok(humantime::format_rfc3339_seconds(time).to_string())
+}
+
+fn show_zenity_dialog(message: &str) -> Result<bool> {
+    match Command::new("zenity")
+        .args([
+            "--info",
+            "--title",
+            "Wallpaper Info",
+            "--no-markup",
+            "--width",
+            "420",
+            "--text",
+            message,
+        ])
+        .status()
+    {
+        Ok(status) => Ok(status.success()),
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(false),
+        Err(e) => Err(e.into()),
+    }
+}
+
+fn show_kdialog(message: &str) -> Result<bool> {
+    match Command::new("kdialog")
+        .args(["--title", "Wallpaper Info", "--msgbox", message])
+        .status()
+    {
+        Ok(status) => Ok(status.success()),
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(false),
+        Err(e) => Err(e.into()),
+    }
 }

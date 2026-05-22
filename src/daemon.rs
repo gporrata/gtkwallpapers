@@ -63,6 +63,15 @@ pub async fn run() -> Result<()> {
                             }
                         }
                     }
+                    tray::Event::Info => {
+                        if let Some(path) = current_wallpaper.as_ref() {
+                            if let Err(e) = wallpaper::show_info_dialog(path) {
+                                eprintln!("Failed to show wallpaper info: {e}");
+                            }
+                        } else {
+                            eprintln!("No current wallpaper to show info for.");
+                        }
+                    }
                     tray::Event::Quit => std::process::exit(0),
                 }
             }
