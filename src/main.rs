@@ -30,6 +30,8 @@ enum Command {
     Start,
     /// Stop the background wallpaper service
     Stop,
+    /// Restart the background wallpaper service
+    Restart,
     /// Show the current status of the wallpaper service
     Status,
     /// Uninstall the wallpaper service
@@ -71,6 +73,7 @@ async fn main() -> Result<()> {
         }
         Some(Command::Start) => service::start()?,
         Some(Command::Stop) => service::stop()?,
+        Some(Command::Restart) => service::restart()?,
         Some(Command::Status) => service::status()?,
         Some(Command::Uninstall) => service::uninstall()?,
         Some(Command::Terms { terms }) if !terms.is_empty() => {

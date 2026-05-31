@@ -47,7 +47,7 @@ fn systemctl(args: &[&str]) -> Result<std::process::Output> {
         .context("failed to run systemctl")
 }
 
-pub fn start() -> Result<()> {
+fn ensure_installed() -> Result<()> {
     let path = unit_path()?;
 
     if !path.exists() {
@@ -56,6 +56,12 @@ pub fn start() -> Result<()> {
         systemctl(&["daemon-reload"])?;
         systemctl(&["enable", SERVICE_NAME])?;
     }
+
+    Ok(())
+}
+
+pub fn start() -> Result<()> {
+    ensure_installed()?;
 
     let out = systemctl(&["start", SERVICE_NAME])?;
     if !out.status.success() {
@@ -77,6 +83,20 @@ pub fn stop() -> Result<()> {
         );
     }
     println!("Service stopped.");
+    Ok(())
+}
+
+pub fn restart() -> Result<()> {
+    ensure_installed()?;
+
+    let out = systemctl(&["restart", SERVICE_NAME])?;
+    if !out.status.success() {
+        bail!(
+            "systemctl restart failed:\n{}",
+            String::from_utf8_lossy(&out.stderr)
+        );
+    }
+    println!("Service restarted.");
     Ok(())
 }
 

@@ -45,34 +45,38 @@ pub async fn run() -> Result<()> {
             }
         }
 
-        // Wait for the rotation timer or a tray event, whichever comes first.
-        let cfg = config::load()?;
-        tokio::select! {
-            _ = sleep(Duration::from_secs(cfg.frequency_secs)) => {}
-            Some(event) = rx.recv() => {
-                match event {
-                    tray::Event::Next => {} // falls through to top of loop
-                    tray::Event::DeleteNext => {
-                        if let Some(path) = current_wallpaper.take() {
-                            if path.exists() {
-                                if let Err(e) = std::fs::remove_file(&path) {
-                                    eprintln!("Failed to delete wallpaper: {e}");
-                                } else {
-                                    println!("Deleted wallpaper: {}", path.display());
+        // Wait for the rotation timer or a tray action that intentionally rotates.
+        loop {
+            let cfg = config::load()?;
+            tokio::select! {
+                _ = sleep(Duration::from_secs(cfg.frequency_secs)) => break,
+                Some(event) = rx.recv() => {
+                    match event {
+                        tray::Event::Next => break,
+                        tray::Event::DeleteNext => {
+                            if let Some(path) = current_wallpaper.take() {
+                                if path.exists() {
+                                    if let Err(e) = std::fs::remove_file(&path) {
+                                        eprintln!("Failed to delete wallpaper: {e}");
+                                    } else {
+                                        println!("Deleted wallpaper: {}", path.display());
+                                    }
                                 }
                             }
+
+                            break;
                         }
-                    }
-                    tray::Event::Info => {
-                        if let Some(path) = current_wallpaper.as_ref() {
-                            if let Err(e) = wallpaper::show_info_dialog(path) {
-                                eprintln!("Failed to show wallpaper info: {e}");
+                        tray::Event::Info => {
+                            if let Some(path) = current_wallpaper.as_ref() {
+                                if let Err(e) = wallpaper::show_info_dialog(path) {
+                                    eprintln!("Failed to show wallpaper info: {e}");
+                                }
+                            } else {
+                                eprintln!("No current wallpaper to show info for.");
                             }
-                        } else {
-                            eprintln!("No current wallpaper to show info for.");
                         }
+                        tray::Event::Quit => std::process::exit(0),
                     }
-                    tray::Event::Quit => std::process::exit(0),
                 }
             }
         }

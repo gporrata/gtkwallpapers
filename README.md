@@ -55,6 +55,7 @@ The daemon installs itself as a systemd user service and rotates through your do
 |---|---|
 | `gtkwallpapers start` | Install the systemd user service (if needed) and start the daemon |
 | `gtkwallpapers stop` | Stop the running daemon |
+| `gtkwallpapers restart` | Restart the background wallpaper service |
 | `gtkwallpapers status` | Show whether the daemon is running and recent log output |
 | `gtkwallpapers uninstall` | Stop and remove the systemd service unit |
 | `gtkwallpapers terms <term> [terms...]` | Add one or more search terms (e.g. `terms mountains "sunset sky"`) |
