@@ -1,5 +1,6 @@
 mod config;
 mod daemon;
+mod metadata;
 mod providers;
 mod service;
 mod terms;
@@ -18,7 +19,10 @@ enum Provider {
 }
 
 #[derive(Parser)]
-#[command(name = "gtkwallpapers", about = "Rotating wallpaper daemon for GNOME/GTK desktops")]
+#[command(
+    name = "gtkwallpapers",
+    about = "Rotating wallpaper daemon for GNOME/GTK desktops"
+)]
 struct Cli {
     #[command(subcommand)]
     command: Option<Command>,
@@ -49,9 +53,7 @@ enum Command {
         key: Option<String>,
     },
     /// Set how often the wallpaper rotates (e.g. 30m, 1h)
-    Update {
-        frequency: String,
-    },
+    Update { frequency: String },
     /// Download wallpapers from all configured photo providers
     Init,
     /// Switch to the next wallpaper immediately
@@ -92,17 +94,20 @@ async fn main() -> Result<()> {
         Some(Command::Key { provider: None, .. }) => {
             let cfg = config::load()?;
             println!("{:<12} {}", "PROVIDER", "KEY");
-            println!("{:<12} {}", "unsplash",  key_status(&cfg.unsplash_api_key));
-            println!("{:<12} {}", "pexels",    key_status(&cfg.pexels_api_key));
-            println!("{:<12} {}", "pixabay",   key_status(&cfg.pixabay_api_key));
+            println!("{:<12} {}", "unsplash", key_status(&cfg.unsplash_api_key));
+            println!("{:<12} {}", "pexels", key_status(&cfg.pexels_api_key));
+            println!("{:<12} {}", "pixabay", key_status(&cfg.pixabay_api_key));
             println!("{:<12} {}", "wallhaven", key_status(&cfg.wallhaven_api_key));
         }
-        Some(Command::Key { provider: Some(provider), key }) => {
+        Some(Command::Key {
+            provider: Some(provider),
+            key,
+        }) => {
             let mut cfg = config::load()?;
             let (slot, name) = match provider {
-                Provider::Unsplash  => (&mut cfg.unsplash_api_key,  "unsplash"),
-                Provider::Pexels    => (&mut cfg.pexels_api_key,    "pexels"),
-                Provider::Pixabay   => (&mut cfg.pixabay_api_key,   "pixabay"),
+                Provider::Unsplash => (&mut cfg.unsplash_api_key, "unsplash"),
+                Provider::Pexels => (&mut cfg.pexels_api_key, "pexels"),
+                Provider::Pixabay => (&mut cfg.pixabay_api_key, "pixabay"),
                 Provider::Wallhaven => (&mut cfg.wallhaven_api_key, "wallhaven"),
             };
             match key {
@@ -131,7 +136,9 @@ async fn main() -> Result<()> {
         Some(Command::Init) => {
             let cfg = config::load()?;
             if cfg.terms.is_empty() {
-                anyhow::bail!("No search terms configured. Add some with `gtkwallpapers terms <term>`.");
+                anyhow::bail!(
+                    "No search terms configured. Add some with `gtkwallpapers terms <term>`."
+                );
             }
             println!("Downloading wallpapers from all configured providers…");
             let saved = providers::download_all(&reqwest::Client::new(), &cfg).await?;
