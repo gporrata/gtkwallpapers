@@ -82,7 +82,7 @@ The daemon installs itself as a systemd user service and rotates through your do
 | Next wallpaper | Rotate now (also on left-click) |
 | Delete + Next Wallpaper | Permanently delete the current wallpaper; it is never downloaded again |
 | Block photographer “name” + Next | Block the current wallpaper's photographer, remove their cached wallpapers and rotate |
-| Info | Show wallpaper details, with **Delete wallpaper** and **Block photographer** buttons |
+| Info | Show wallpaper details. OK closes it; **More actions…** opens a second dialog (default: Cancel) with **Delete wallpaper** and **Block photographer** |
 | Search Terms & Blocked Photographers… | Dialog listing the configured search terms and blocked photographers |
 | Search Terms ▸ / Blocked Photographers ▸ | Submenus listing the same; click a blocked photographer to unblock them |
 

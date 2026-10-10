@@ -103,11 +103,15 @@ pub enum InfoAction {
     BlockPhotographer(String),
 }
 
+const MORE_BUTTON: &str = "More actions…";
 const DELETE_BUTTON: &str = "Delete wallpaper";
 const BLOCK_BUTTON: &str = "Block photographer";
 
-/// Show wallpaper info. The dialog offers "Delete wallpaper" and, when the
-/// photographer is known, "Block photographer" buttons.
+/// Show wallpaper info. OK (the default, Enter) just closes it. Destructive
+/// actions are tucked behind a "More actions…" button that opens a second
+/// dialog with "Delete wallpaper" and, when the photographer is known,
+/// "Block photographer"; that dialog's default button is Cancel, and closing
+/// it with Esc or the window button also cancels.
 pub fn show_info_dialog(path: &Path) -> Result<InfoAction> {
     let record = crate::db::find_by_path(path).ok().flatten();
     let photographer = record
@@ -116,20 +120,33 @@ pub fn show_info_dialog(path: &Path) -> Result<InfoAction> {
         .filter(|name| !name.trim().is_empty());
     let message = info_text(path, record.as_ref())?;
 
-    let mut buttons = vec![DELETE_BUTTON];
-    if photographer.is_some() {
-        buttons.push(BLOCK_BUTTON);
-    }
-
-    let choice = match zenity_info("Wallpaper Info", &message, &buttons)? {
-        Some(choice) => choice,
+    match zenity_info("Wallpaper Info", &message, &[MORE_BUTTON], None)? {
+        Some(choice) if choice == MORE_BUTTON => {}
+        Some(_) => return Ok(InfoAction::None),
         None => {
             if !show_kdialog("Wallpaper Info", &message)? {
                 println!("{message}");
             }
             return Ok(InfoAction::None);
         }
-    };
+    }
+
+    let base_name = path
+        .file_name()
+        .map(|name| name.to_string_lossy().into_owned())
+        .unwrap_or_default();
+    let mut actions =
+        format!("{base_name}\n\nDelete wallpaper: remove it and never download it again.");
+    let mut buttons = vec![DELETE_BUTTON];
+    if let Some(name) = &photographer {
+        actions.push_str(&format!(
+            "\nBlock photographer: hide all work by {name} (undo from the tray menu)."
+        ));
+        buttons.push(BLOCK_BUTTON);
+    }
+
+    let choice =
+        zenity_info("Wallpaper Actions", &actions, &buttons, Some("Cancel"))?.unwrap_or_default();
 
     Ok(match (choice.as_str(), photographer) {
         (DELETE_BUTTON, _) => InfoAction::Delete,
@@ -156,7 +173,7 @@ pub fn show_terms_dialog(terms: &[String]) -> Result<()> {
     lines.push("Unblock from the tray menu or with `gtkwallpapers unblock <name>`.".to_owned());
     let message = lines.join("\n");
 
-    if zenity_info("Search Terms & Blocked Photographers", &message, &[])?.is_none()
+    if zenity_info("Search Terms & Blocked Photographers", &message, &[], None)?.is_none()
         && !show_kdialog("Search Terms & Blocked Photographers", &message)?
     {
         println!("{message}");
@@ -272,8 +289,13 @@ fn downloaded_at(path: &Path) -> Result<String> {
 
 /// Show a zenity info dialog with optional extra buttons. Returns `None` if
 /// zenity is not installed, otherwise the label of the extra button pressed
-/// (empty string for OK / close).
-fn zenity_info(title: &str, message: &str, buttons: &[&str]) -> Result<Option<String>> {
+/// (empty string for OK, Esc or closing the window).
+fn zenity_info(
+    title: &str,
+    message: &str,
+    buttons: &[&str],
+    ok_label: Option<&str>,
+) -> Result<Option<String>> {
     let mut cmd = Command::new("zenity");
     cmd.args([
         "--info",
@@ -285,6 +307,9 @@ fn zenity_info(title: &str, message: &str, buttons: &[&str]) -> Result<Option<St
         "--text",
         message,
     ]);
+    if let Some(label) = ok_label {
+        cmd.args(["--ok-label", label]);
+    }
     for button in buttons {
         cmd.args(["--extra-button", button]);
     }
