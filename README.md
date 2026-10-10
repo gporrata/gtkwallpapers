@@ -6,11 +6,12 @@ A Rust CLI tool that runs a background daemon to automatically rotate desktop wa
 
 **1. Install system dependencies**
 
-The system tray icon requires DBus development headers:
+The system tray icon requires DBus development headers (SQLite is bundled and
+compiled in, so it only needs a C compiler such as `build-essential`):
 
 ```
 # Debian / Ubuntu
-sudo apt install libdbus-1-dev pkg-config
+sudo apt install libdbus-1-dev pkg-config build-essential
 
 # Fedora / RHEL
 sudo dnf install dbus-devel pkgconf-pkg-config
@@ -19,8 +20,12 @@ sudo dnf install dbus-devel pkgconf-pkg-config
 **2. Install the binary**
 
 ```
-cargo install --path .
+cargo install --git https://github.com/gporrata/gtkwallpapers --force
+# or, from a checkout:
+cargo install --path . --force
 ```
+
+Then restart the daemon to pick up the new binary: `gtkwallpapers restart`.
 
 **3. GNOME tray icon support** (Ubuntu 22.04+)
 
@@ -65,7 +70,37 @@ The daemon installs itself as a systemd user service and rotates through your do
 | `gtkwallpapers init` | Download wallpapers from all configured photo providers |
 | `gtkwallpapers next` | Switch to the next wallpaper immediately |
 | `gtkwallpapers update <frequency>` | Set the wallpaper rotation interval (e.g. `30m`, `1h`, `2h30m`) |
-| `gtkwallpapers path` | Print the folders where downloaded wallpapers are stored |
+| `gtkwallpapers path` | Print the folders where downloaded wallpapers are stored and the database path |
+| `gtkwallpapers blocked` | List blocked photographers and wallpaper history counts |
+| `gtkwallpapers block <name>` | Block a photographer: never download their work and remove cached wallpapers |
+| `gtkwallpapers unblock <name>` | Unblock a photographer |
+
+## Tray menu
+
+| Item | Action |
+|---|---|
+| Next wallpaper | Rotate now (also on left-click) |
+| Delete + Next Wallpaper | Permanently delete the current wallpaper; it is never downloaded again |
+| Block photographer “name” + Next | Block the current wallpaper's photographer, remove their cached wallpapers and rotate |
+| Info | Show wallpaper details, with **Delete wallpaper** and **Block photographer** buttons |
+| Search Terms & Blocked Photographers… | Dialog listing the configured search terms and blocked photographers |
+| Search Terms ▸ / Blocked Photographers ▸ | Submenus listing the same; click a blocked photographer to unblock them |
+
+The wallpaper being shown has its file name printed in small type in the lower-right corner.
+The labelled copy is written to `~/.cache/gtkwallpapers/`; the original download is untouched.
+
+## Wallpaper history
+
+Every downloaded wallpaper is recorded in a SQLite database at
+`~/.local/share/gtkwallpapers/gtkwallpapers.db`, keyed by provider and the provider's image id,
+with its search term, photographer, URL, local path and status (`downloaded`, `deleted` or `blocked`).
+Providers skip any deleted image and any blocked photographer regardless of what is on disk, so
+the image cache under `~/.config/gtkwallpapers/` can be cleared at any time without losing deletion
+history. Images are saved as `<provider>/<provider id>.<ext>`, so the same image found through
+different search terms is only stored once.
+
+Older versions kept a `.json` sidecar next to each image; these are imported into the database
+automatically on first run (orphaned sidecars count as deleted) and then removed.
 
 ## Photo providers
 
