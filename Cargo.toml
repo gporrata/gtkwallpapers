@@ -16,3 +16,5 @@ ksni = "0.2"
 humantime = "2"
 anyhow = "1"
 image = { version = "0.25", default-features = false, features = ["jpeg", "png", "webp"] }
+rusqlite = { version = "0.40.2", features = ["bundled"] }
+ab_glyph = "0.2.32"

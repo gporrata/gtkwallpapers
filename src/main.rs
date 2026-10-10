@@ -1,6 +1,8 @@
 mod config;
 mod daemon;
+mod db;
 mod metadata;
+mod overlay;
 mod providers;
 mod service;
 mod terms;
@@ -58,8 +60,14 @@ enum Command {
     Init,
     /// Switch to the next wallpaper immediately
     Next,
-    /// Print the folder where wallpapers are stored
+    /// Print the folders where wallpapers are stored and the database path
     Path,
+    /// List blocked photographers and wallpaper history counts
+    Blocked,
+    /// Block a photographer: never download their work and remove cached wallpapers
+    Block { name: String },
+    /// Unblock a previously blocked photographer
+    Unblock { name: String },
     /// Run the daemon loop (called internally by the systemd service)
     #[command(hide = true)]
     Daemon,
@@ -157,6 +165,36 @@ async fn main() -> Result<()> {
         Some(Command::Path) => {
             for name in config::SERVICE_NAMES {
                 println!("{}", config::service_dir(name)?.display());
+            }
+            println!("{}", db::db_path()?.display());
+        }
+        Some(Command::Blocked) => {
+            let blocked = db::blocked_photographers()?;
+            if blocked.is_empty() {
+                println!("No blocked photographers.");
+            } else {
+                println!("Blocked photographers:");
+                for name in blocked {
+                    println!("  {name}");
+                }
+            }
+            let counts = db::status_counts()?;
+            if !counts.is_empty() {
+                println!("\nWallpaper history:");
+                for (status, count) in counts {
+                    println!("  {status:<12} {count}");
+                }
+            }
+        }
+        Some(Command::Block { name }) => {
+            let removed = db::block_photographer(&name)?;
+            println!("Blocked photographer {name}; removed {removed} cached wallpaper(s).");
+        }
+        Some(Command::Unblock { name }) => {
+            if db::unblock_photographer(&name)? {
+                println!("Unblocked photographer {name}.");
+            } else {
+                println!("{name} was not blocked.");
             }
         }
         Some(Command::Daemon) => daemon::run().await?,

@@ -1,7 +1,7 @@
-use anyhow::Result;
 use serde::{Deserialize, Serialize};
-use std::path::{Path, PathBuf};
 
+/// Provider metadata for one wallpaper. Stored as JSON in the `metadata`
+/// column of the wallpaper database (see `db.rs`).
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct WallpaperMetadata {
     pub provider: String,
@@ -15,6 +15,7 @@ pub struct WallpaperMetadata {
     pub width: Option<u32>,
     pub height: Option<u32>,
     pub color: Option<String>,
+    #[serde(default)]
     pub tags: Vec<String>,
     pub likes: Option<u64>,
     pub views: Option<u64>,
@@ -23,25 +24,4 @@ pub struct WallpaperMetadata {
     pub category: Option<String>,
     pub purity: Option<String>,
     pub file_size: Option<u64>,
-}
-
-pub fn metadata_path(image_path: &Path) -> PathBuf {
-    image_path.with_extension("json")
-}
-
-pub fn save(image_path: &Path, metadata: &WallpaperMetadata) -> Result<()> {
-    let path = metadata_path(image_path);
-    let text = serde_json::to_string_pretty(metadata)?;
-    std::fs::write(path, text)?;
-    Ok(())
-}
-
-pub fn load(image_path: &Path) -> Result<Option<WallpaperMetadata>> {
-    let path = metadata_path(image_path);
-    if !path.exists() {
-        return Ok(None);
-    }
-
-    let text = std::fs::read_to_string(path)?;
-    Ok(Some(serde_json::from_str(&text)?))
 }
